@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz Web App</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; margin: 20px; }
+        .container { max-width: 500px; margin: auto; padding: 20px; border: 1px solid #ccc; border-radius: 10px; }
+        .hidden { display: none; }
+        button { padding: 10px; margin: 5px; cursor: pointer; }
+        .options { text-align: left; }
+        .options label { display: block; text-align: justify; }
+    </style>
+</head>
+<body>
+    <div id="auth" class="container">
+        <h2>Enter Your Name</h2>
+        <input type="text" id="username" placeholder="Enter your name" required>
+        <button onclick="enterQuiz()">Enter</button>
+    </div>
+    
+    <div id="welcome" class="container hidden">
+        <h2>Welcome, <span id="user"></span>!</h2>
+        <p>Choose a quiz section:</p>
+        <button onclick="startQuiz('beginner')">Beginner</button>
+        <button onclick="startQuiz('intermediate')">Intermediate</button>
+        <button onclick="startQuiz('advanced')">Advanced</button>
+    </div>
+    
+    <div id="quiz" class="container hidden">
+        <h2 id="sectionTitle"></h2>
+        <p id="question"></p>
+        <div id="options" class="options"></div>
+        <button onclick="prevQuestion()">Previous</button>
+        <button onclick="nextQuestion()">Next</button>
+        <button onclick="submitQuiz()">Submit</button>
+    </div>
+    
+    <div id="result" class="container hidden">
+        <h2 id="resultText"></h2>
+        <button id="retryButton" onclick="restartQuiz()">Try Again</button>
+        <button id="nextSectionButton" onclick="nextSection()" class="hidden">Next Section</button>
+    </div>
+    
+    <script>
+        let user = "";
+        let currentSection = "";
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let answers = [];
+        
+        const questions = {
+            beginner: [
+                { q: "Who was Nigeria's first president?", options: ["Nnamdi Azikiwe", "Obafemi Awolowo", "Ahmadu Bello", "Tafawa Balewa"], answer: "Nnamdi Azikiwe" },
+                { q: "What year did Nigeria gain independence?", options: ["1958", "1960", "1963", "1970"], answer: "1960" },
+                { q: "What is the capital of Nigeria?", options: ["Lagos", "Abuja", "Port Harcourt", "Kaduna"], answer: "Abuja" },
+                { q: "Which is the largest ethnic group in Nigeria?", options: ["Hausa", "Igbo", "Yoruba", "Fulani"], answer: "Hausa" },
+                { q: "What is Nigeria's currency?", options: ["Dollar", "Naira", "Cedi", "Pound"], answer: "Naira" }
+            ],
+            intermediate: [
+                { q: "Which is the longest river in Nigeria?", options: ["River Niger", "River Benue", "Ogun River", "Osun River"], answer: "River Niger" },
+                { q: "Who composed Nigeria's national anthem?", options: ["Pa Benedict Odiase", "Fela Kuti", "Wole Soyinka", "Sunny Ade"], answer: "Pa Benedict Odiase" },
+                { q: "How many states are in Nigeria?", options: ["30", "36", "40", "25"], answer: "36" },
+                { q: "Which Nigerian city is known as the 'Coal City'?", options: ["Lagos", "Kano", "Enugu", "Ibadan"], answer: "Enugu" },
+                { q: "Who was the first military Head of State in Nigeria?", options: ["Yakubu Gowon", "Aguiyi Ironsi", "Murtala Mohammed", "Olusegun Obasanjo"], answer: "Aguiyi Ironsi" }
+            ],
+            advanced: [
+                { q: "When was the first coup in Nigeria?", options: ["1966", "1975", "1983", "1990"], answer: "1966" },
+                { q: "What is the name of Nigeria's upper legislative chamber?", options: ["House of Representatives", "National Assembly", "Senate", "House of Lords"], answer: "Senate" },
+                { q: "Which Nigerian state is the largest by landmass?", options: ["Kano", "Niger", "Borno", "Lagos"], answer: "Niger" },
+                { q: "Who was the first executive president of Nigeria?", options: ["Shehu Shagari", "Olusegun Obasanjo", "Goodluck Jonathan", "Muhammadu Buhari"], answer: "Shehu Shagari" },
+                { q: "What is the main export of Nigeria?", options: ["Gold", "Oil", "Cocoa", "Timber"], answer: "Oil" }
+            ]
+        };
+
+        function enterQuiz() {
+            user = document.getElementById("username").value.trim();
+            if (user) {
+                document.getElementById("auth").classList.add("hidden");
+                document.getElementById("welcome").classList.remove("hidden");
+                document.getElementById("user").innerText = user;
+            } else {
+                alert("Please enter your name");
+            }
+        }
+
+        function startQuiz(section) {
+            currentSection = section;
+            currentQuestionIndex = 0;
+            score = 0;
+            answers = [];
+            document.getElementById("welcome").classList.add("hidden");
+            document.getElementById("quiz").classList.remove("hidden");
+            document.getElementById("sectionTitle").innerText = section.toUpperCase() + " Quiz";
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            const questionData = questions[currentSection][currentQuestionIndex];
+            document.getElementById("question").innerText = questionData.q;
+            let optionsHtml = "";
+            questionData.options.forEach(option => {
+                optionsHtml += `<label><input type='radio' name='option' value='${option}' onclick="storeAnswer('${option}')"> ${option}</label><br>`;
+            });
+            document.getElementById("options").innerHTML = optionsHtml;
+        }
+
+        function storeAnswer(selectedAnswer) {
+            answers[currentQuestionIndex] = selectedAnswer;
+        }
+
+        function prevQuestion() {
+            if (currentQuestionIndex > 0) {
+                currentQuestionIndex--;
+                loadQuestion();
+            }
+        }
+
+        function nextQuestion() {
+            if (currentQuestionIndex < questions[currentSection].length - 1) {
+                currentQuestionIndex++;
+                loadQuestion();
+            }
+        }
+
+        function submitQuiz() {
+            const totalQuestions = questions[currentSection].length;
+
+            // Calculate score
+            score = 0;
+            questions[currentSection].forEach((question, index) => {
+                if (answers[index] === question.answer) {
+                    score++;
+                }
+            });
+
+            const avgScore = totalQuestions / 2;
+            let resultMessage = "";
+            if (score === totalQuestions) {
+                resultMessage = `Congratulations ${user}, you got all the questions correct! Move on to the next section.`;
+                document.getElementById("retryButton").classList.add("hidden");
+                document.getElementById("nextSectionButton").classList.remove("hidden"); // Show next section button
+            } else if (score >= avgScore) {
+                resultMessage = `Well done ${user}, you scored ${score}! You can move to the next section or try again for better results.`;
+                document.getElementById("retryButton").classList.remove("hidden");
+                document.getElementById("nextSectionButton").classList.add("hidden");
+            } else {
+                resultMessage = `Oh! ${user}, you scored below average. Try again in the same section.`;
+                document.getElementById("retryButton").classList.remove("hidden");
+                document.getElementById("nextSectionButton").classList.add("hidden");
+            }
+
+            document.getElementById("resultText").innerText = resultMessage;
+            document.getElementById("quiz").classList.add("hidden");
+            document.getElementById("result").classList.remove("hidden");
+        }
+
+        function nextSection() {
+            // Proceed to the next section if the user scored 100%
+            const sections = ['beginner', 'intermediate', 'advanced'];
+            const currentIndex = sections.indexOf(currentSection);
+            if (currentIndex < sections.length - 1) {
+                const nextSection = sections[currentIndex + 1];
+                startQuiz(nextSection); // Start the next section
+            } else {
+                alert("You have completed all sections!");
+            }
+        }
+
+        function restartQuiz() {
+            document.getElementById("result").classList.add("hidden");
+            document.getElementById("auth").classList.remove("hidden");
+            user = "";
+            currentSection = "";
+            currentQuestionIndex = 0;
+            score = 0;
+            answers = [];
+        }
+    </script>
+</body>
+</html>
