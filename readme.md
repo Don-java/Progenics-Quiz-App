@@ -1,4 +1,3 @@
-Quiz Web App
 Welcome to the Quiz Web App! This app allows users to participate in a multi-section quiz that includes Beginner, Intermediate, and Advanced levels. The app is designed to test knowledge on a variety of topics, with options to track progress and move to the next section based on your performance.
 
 Features
