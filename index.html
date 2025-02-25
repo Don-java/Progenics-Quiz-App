@@ -3,180 +3,311 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quiz Web App</title>
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>Professional Quiz System</title>
     <style>
-        body { font-family: Arial, sans-serif; text-align: center; margin: 20px; }
-        .container { max-width: 500px; margin: auto; padding: 20px; border: 1px solid #ccc; border-radius: 10px; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: 'Arial', sans-serif;
+            background: #f0f2f5;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .header {
+            width: 100%;
+            padding: 20px 0;
+            background: #ffffff;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .container {
+            width: 90%;
+            max-width: 600px;
+            margin: 20px 0;
+            padding: 30px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 25px rgba(0,0,0,0.1);
+        }
+        input[type="radio"] {
+            appearance: none;
+            width: 22px;
+            height: 22px;
+            border: 2px solid #2c3e50;
+            border-radius: 4px;
+            margin-right: 12px;
+            position: relative;
+            cursor: pointer;
+        }
+        input[type="radio"]:checked {
+            background-color: #2c3e50;
+        }
+        input[type="radio"]:checked::after {
+            content: "✓";
+            position: absolute;
+            color: white;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 14px;
+        }
+        #options label {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            margin: 15px 0;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        button {
+            padding: 12px 30px;
+            margin: 10px;
+            border: none;
+            border-radius: 25px;
+            background-color: #2980b9;
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        button:hover {
+            background-color: #3498db;
+            transform: translateY(-2px);
+        }
+        .quit-btn { background-color: #e74c3c; }
         .hidden { display: none; }
-        button { padding: 10px; margin: 5px; cursor: pointer; }
-        .options { text-align: left; }
-        .options label { display: block; text-align: justify; }
+        .error { color: #e74c3c; margin: 10px 0; }
+        input {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-sizing: border-box;
+        }
+        .congrats { color: #27ae60; font-weight: bold; }
+        .encourage { color: #e67e22; }
+        .progress-bar {
+            width: 100%;
+            height: 10px;
+            background: #e0e0e0;
+            border-radius: 5px;
+            margin: 20px 0;
+            overflow: hidden;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            background: #2980b9;
+            transition: width 0.3s ease;
+        }
+        #progress {
+            font-size: 14px;
+            color: #666;
+            margin: 10px 0;
+        }
     </style>
 </head>
 <body>
-    <div id="auth" class="container">
+    <div class="header">
+        <h1>Welcome To FWC Quiz</h1>
+    </div>
+
+    <!-- User Registration -->
+    <div id="userReg" class="container">
         <h2>Enter Your Name</h2>
-        <input type="text" id="username" placeholder="Enter your name" required>
-        <button onclick="enterQuiz()">Enter</button>
+        <input type="text" id="userName" placeholder="Your full name" required>
+        <button onclick="startQuiz()">Begin Quiz</button>
     </div>
-    
-    <div id="welcome" class="container hidden">
-        <h2>Welcome, <span id="user"></span>!</h2>
-        <p>Choose a quiz section:</p>
-        <button onclick="startQuiz('beginner')">Beginner</button>
-        <button onclick="startQuiz('intermediate')">Intermediate</button>
-        <button onclick="startQuiz('advanced')">Advanced</button>
-    </div>
-    
+
+    <!-- Quiz Interface -->
     <div id="quiz" class="container hidden">
+        <button class="quit-btn" onclick="quitQuiz()">Quit Quiz</button>
         <h2 id="sectionTitle"></h2>
+        <div class="progress-bar">
+            <div class="progress-bar-fill" id="progressBarFill"></div>
+        </div>
+        <p id="progress">Question 1 of 20</p>
         <p id="question"></p>
-        <div id="options" class="options"></div>
-        <button onclick="prevQuestion()">Previous</button>
-        <button onclick="nextQuestion()">Next</button>
-        <button onclick="submitQuiz()">Submit</button>
+        <div id="options"></div>
+        <div class="nav-buttons">
+            <button id="prevBtn" onclick="prevQuestion()">Previous</button>
+            <button id="nextBtn" onclick="nextQuestion()">Next</button>
+            <button id="submitBtn" onclick="submitQuiz()" class="hidden">Submit</button>
+        </div>
     </div>
-    
+
+    <!-- Results -->
     <div id="result" class="container hidden">
-        <h2 id="resultText"></h2>
-        <button id="retryButton" onclick="restartQuiz()">Try Again</button>
-        <button id="nextSectionButton" onclick="nextSection()" class="hidden">Next Section</button>
+        <h2>Quiz Results</h2>
+        <p id="scoreMessage"></p>
+        <button id="nextSectionBtn" onclick="goToNextSection()" class="hidden">Next Section</button>
+        <button onclick="restartQuiz()">Restart Quiz</button>
     </div>
-    
+
     <script>
-        let user = "";
-        let currentSection = "";
-        let currentQuestionIndex = 0;
-        let score = 0;
-        let answers = [];
-        
+        // Quiz Configuration
+        const PASSING_SCORE = 0.7; // 70% to pass
+        const QUESTIONS_PER_SECTION = 20;
+
+        // Quiz Variables
+        const sections = [
+            { id: "beginner", title: "Beginner" },
+            { id: "intermediate", title: "Intermediate" },
+            { id: "advanced", title: "Advanced" }
+        ];
+
+        let currentUser = {
+            name: "",
+            currentSection: "beginner",
+            currentQuestionIndex: 0,
+            userAnswers: new Array(QUESTIONS_PER_SECTION).fill(null)
+        };
+
+        // Quiz Data
         const questions = {
             beginner: [
-                { q: "Who was Nigeria's first president?", options: ["Nnamdi Azikiwe", "Obafemi Awolowo", "Ahmadu Bello", "Tafawa Balewa"], answer: "Nnamdi Azikiwe" },
-                { q: "What year did Nigeria gain independence?", options: ["1958", "1960", "1963", "1970"], answer: "1960" },
-                { q: "What is the capital of Nigeria?", options: ["Lagos", "Abuja", "Port Harcourt", "Kaduna"], answer: "Abuja" },
-                { q: "Which is the largest ethnic group in Nigeria?", options: ["Hausa", "Igbo", "Yoruba", "Fulani"], answer: "Hausa" },
-                { q: "What is Nigeria's currency?", options: ["Dollar", "Naira", "Cedi", "Pound"], answer: "Naira" }
+                { q: "Where is Family Worship Centre (FWC) Mother Church located?", options: ["Lagos", "Abuja", "Makurdi", "Kano"], answer: "Abuja" },
+                { q: "Who is the founder of Family Worship Centre?", options: ["Pastor Yakubu Yola", "Pastor Smith Aghama", "Pastor Ina Omakwu", "Pastor Friday Oghonim"], answer: "Pastor Ina Omakwu" },
+                // Add remaining beginner questions...
             ],
             intermediate: [
-                { q: "Which is the longest river in Nigeria?", options: ["River Niger", "River Benue", "Ogun River", "Osun River"], answer: "River Niger" },
-                { q: "Who composed Nigeria's national anthem?", options: ["Pa Benedict Odiase", "Fela Kuti", "Wole Soyinka", "Sunny Ade"], answer: "Pa Benedict Odiase" },
-                { q: "How many states are in Nigeria?", options: ["30", "36", "40", "25"], answer: "36" },
-                { q: "Which Nigerian city is known as the 'Coal City'?", options: ["Lagos", "Kano", "Enugu", "Ibadan"], answer: "Enugu" },
-                { q: "Who was the first military Head of State in Nigeria?", options: ["Yakubu Gowon", "Aguiyi Ironsi", "Murtala Mohammed", "Olusegun Obasanjo"], answer: "Aguiyi Ironsi" }
+                { q: "What is the name of FWC’s program for married couples?", options: ["Marriage Builders", "Marriage Enhancement Class", "Couples United", "Happy Homes"], answer: "Marriage Enhancement Class" },
+                // Add remaining intermediate questions...
             ],
             advanced: [
-                { q: "When was the first coup in Nigeria?", options: ["1966", "1975", "1983", "1990"], answer: "1966" },
-                { q: "What is the name of Nigeria's upper legislative chamber?", options: ["House of Representatives", "National Assembly", "Senate", "House of Lords"], answer: "Senate" },
-                { q: "Which Nigerian state is the largest by landmass?", options: ["Kano", "Niger", "Borno", "Lagos"], answer: "Niger" },
-                { q: "Who was the first executive president of Nigeria?", options: ["Shehu Shagari", "Olusegun Obasanjo", "Goodluck Jonathan", "Muhammadu Buhari"], answer: "Shehu Shagari" },
-                { q: "What is the main export of Nigeria?", options: ["Gold", "Oil", "Cocoa", "Timber"], answer: "Oil" }
+                { q: "What is the main theme of Family Worship Centre’s teachings?", options: ["Salvation through Jesus Christ", "Financial success", "Political empowerment", "Business growth"], answer: "Salvation through Jesus Christ" },
+                // Add remaining advanced questions...
             ]
         };
 
-        function enterQuiz() {
-            user = document.getElementById("username").value.trim();
-            if (user) {
-                document.getElementById("auth").classList.add("hidden");
-                document.getElementById("welcome").classList.remove("hidden");
-                document.getElementById("user").innerText = user;
-            } else {
+        // Quiz Functions
+        function startQuiz() {
+            currentUser.name = document.getElementById('userName').value.trim();
+            if (!currentUser.name) {
                 alert("Please enter your name");
+                return;
             }
+            document.getElementById('userReg').classList.add('hidden');
+            initializeQuiz();
         }
 
-        function startQuiz(section) {
-            currentSection = section;
-            currentQuestionIndex = 0;
-            score = 0;
-            answers = [];
-            document.getElementById("welcome").classList.add("hidden");
-            document.getElementById("quiz").classList.remove("hidden");
-            document.getElementById("sectionTitle").innerText = section.toUpperCase() + " Quiz";
+        function initializeQuiz() {
+            document.getElementById('quiz').classList.remove('hidden');
+            updateSectionTitle();
             loadQuestion();
         }
 
+        function updateSectionTitle() {
+            const section = sections.find(s => s.id === currentUser.currentSection);
+            document.getElementById('sectionTitle').textContent = `${section.title} Level`;
+        }
+
         function loadQuestion() {
-            const questionData = questions[currentSection][currentQuestionIndex];
-            document.getElementById("question").innerText = questionData.q;
-            let optionsHtml = "";
-            questionData.options.forEach(option => {
-                optionsHtml += `<label><input type='radio' name='option' value='${option}' onclick="storeAnswer('${option}')"> ${option}</label><br>`;
+            const question = questions[currentUser.currentSection][currentUser.currentQuestionIndex];
+            const optionsDiv = document.getElementById('options');
+            const progress = ((currentUser.currentQuestionIndex + 1) / QUESTIONS_PER_SECTION) * 100;
+            document.getElementById('progressBarFill').style.width = `${progress}%`;
+            document.getElementById('progress').textContent = `Question ${currentUser.currentQuestionIndex + 1} of ${QUESTIONS_PER_SECTION}`;
+            optionsDiv.innerHTML = '';
+            document.getElementById('question').textContent = question.q;
+            question.options.forEach((opt, index) => {
+                const label = document.createElement('label');
+                const radio = document.createElement('input');
+                radio.type = 'radio';
+                radio.name = 'quizOption';
+                radio.value = opt;
+                if (currentUser.userAnswers[currentUser.currentQuestionIndex] === opt) radio.checked = true;
+                label.appendChild(radio);
+                label.appendChild(document.createTextNode(opt));
+                optionsDiv.appendChild(label);
             });
-            document.getElementById("options").innerHTML = optionsHtml;
-        }
-
-        function storeAnswer(selectedAnswer) {
-            answers[currentQuestionIndex] = selectedAnswer;
-        }
-
-        function prevQuestion() {
-            if (currentQuestionIndex > 0) {
-                currentQuestionIndex--;
-                loadQuestion();
-            }
+            document.getElementById('prevBtn').disabled = currentUser.currentQuestionIndex === 0;
+            document.getElementById('nextBtn').classList.toggle('hidden', currentUser.currentQuestionIndex >= QUESTIONS_PER_SECTION - 1);
+            document.getElementById('submitBtn').classList.toggle('hidden', currentUser.currentQuestionIndex < QUESTIONS_PER_SECTION - 1);
         }
 
         function nextQuestion() {
-            if (currentQuestionIndex < questions[currentSection].length - 1) {
-                currentQuestionIndex++;
+            saveAnswer();
+            if (currentUser.currentQuestionIndex < QUESTIONS_PER_SECTION - 1) {
+                currentUser.currentQuestionIndex++;
                 loadQuestion();
             }
         }
 
-        function submitQuiz() {
-            const totalQuestions = questions[currentSection].length;
-
-            // Calculate score
-            score = 0;
-            questions[currentSection].forEach((question, index) => {
-                if (answers[index] === question.answer) {
-                    score++;
-                }
-            });
-
-            const avgScore = totalQuestions / 2;
-            let resultMessage = "";
-            if (score === totalQuestions) {
-                resultMessage = `Congratulations ${user}, you got all the questions correct! Move on to the next section.`;
-                document.getElementById("retryButton").classList.add("hidden");
-                document.getElementById("nextSectionButton").classList.remove("hidden"); // Show next section button
-            } else if (score >= avgScore) {
-                resultMessage = `Well done ${user}, you scored ${score}! You can move to the next section or try again for better results.`;
-                document.getElementById("retryButton").classList.remove("hidden");
-                document.getElementById("nextSectionButton").classList.add("hidden");
-            } else {
-                resultMessage = `Oh! ${user}, you scored below average. Try again in the same section.`;
-                document.getElementById("retryButton").classList.remove("hidden");
-                document.getElementById("nextSectionButton").classList.add("hidden");
+        function prevQuestion() {
+            if (currentUser.currentQuestionIndex > 0) {
+                currentUser.currentQuestionIndex--;
+                loadQuestion();
             }
-
-            document.getElementById("resultText").innerText = resultMessage;
-            document.getElementById("quiz").classList.add("hidden");
-            document.getElementById("result").classList.remove("hidden");
         }
 
-        function nextSection() {
-            // Proceed to the next section if the user scored 100%
-            const sections = ['beginner', 'intermediate', 'advanced'];
-            const currentIndex = sections.indexOf(currentSection);
-            if (currentIndex < sections.length - 1) {
-                const nextSection = sections[currentIndex + 1];
-                startQuiz(nextSection); // Start the next section
-            } else {
-                alert("You have completed all sections!");
+        function saveAnswer() {
+            const selected = document.querySelector('input[name="quizOption"]:checked');
+            currentUser.userAnswers[currentUser.currentQuestionIndex] = selected ? selected.value : null;
+        }
+
+        function submitQuiz() {
+            saveAnswer();
+            const correct = questions[currentUser.currentSection].map(q => q.answer);
+            let score = 0;
+            currentUser.userAnswers.forEach((ans, idx) => {
+                if (ans === correct[idx]) score++;
+            });
+            const percentage = (score / QUESTIONS_PER_SECTION).toFixed(2);
+            const passed = percentage >= PASSING_SCORE;
+            document.getElementById('quiz').classList.add('hidden');
+            document.getElementById('result').classList.remove('hidden');
+            const scoreMessage = document.getElementById('scoreMessage');
+            scoreMessage.innerHTML = `
+                <p class="${passed ? 'congrats' : 'encourage'}">Dear ${currentUser.name},</p>
+                <p>You ${passed ? 'passed' : 'did not pass'} this section with a score of ${score}/${QUESTIONS_PER_SECTION} (${(percentage * 100).toFixed(0)}%)</p>
+                <p>${passed ? '🎉 Congratulations! Well done!' : '💪 Keep trying! You can do better!'}</p>
+            `;
+            const currentSectionIndex = sections.findIndex(s => s.id === currentUser.currentSection);
+            const nextSectionBtn = document.getElementById('nextSectionBtn');
+            nextSectionBtn.classList.toggle('hidden', currentSectionIndex >= sections.length - 1);
+        }
+
+        function goToNextSection() {
+            const currentSectionIndex = sections.findIndex(s => s.id === currentUser.currentSection);
+            if (currentSectionIndex < sections.length - 1) {
+                currentUser.currentSection = sections[currentSectionIndex + 1].id;
+                currentUser.currentQuestionIndex = 0;
+                currentUser.userAnswers = new Array(QUESTIONS_PER_SECTION).fill(null);
+                document.getElementById('result').classList.add('hidden');
+                initializeQuiz();
+            }
+        }
+
+        function quitQuiz() {
+            if (confirm('Are you sure you want to quit?')) {
+                document.getElementById('quiz').classList.add('hidden');
+                document.getElementById('userReg').classList.remove('hidden');
+                resetUserSession();
             }
         }
 
         function restartQuiz() {
-            document.getElementById("result").classList.add("hidden");
-            document.getElementById("auth").classList.remove("hidden");
-            user = "";
-            currentSection = "";
-            currentQuestionIndex = 0;
-            score = 0;
-            answers = [];
+            document.getElementById('result').classList.add('hidden');
+            currentUser.currentQuestionIndex = 0;
+            currentUser.userAnswers = new Array(QUESTIONS_PER_SECTION).fill(null);
+            initializeQuiz();
         }
+
+        function resetUserSession() {
+            currentUser = {
+                name: "",
+                currentSection: "beginner",
+                currentQuestionIndex: 0,
+                userAnswers: new Array(QUESTIONS_PER_SECTION).fill(null)
+            };
+        }
+
+        // Add touch event support for mobile
+        document.addEventListener('touchstart', function(){}, true);
     </script>
 </body>
 </html>
