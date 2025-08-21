@@ -1,135 +1,170 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Student Result Checker</title>
-
-  <!-- PWA manifest embedded -->
-  <link rel="manifest" href="data:application/manifest+json,{
-    &quot;name&quot;: &quot;Student Result Checker&quot;,
-    &quot;short_name&quot;: &quot;ResultApp&quot;,
-    &quot;start_url&quot;: &quot;.&quot;,
-    &quot;display&quot;: &quot;standalone&quot;,
-    &quot;background_color&quot;: &quot;#ffffff&quot;,
-    &quot;theme_color&quot;: &quot;#1e3a8a&quot;,
-    &quot;icons&quot;: [
-      {&quot;src&quot;:&quot;https://via.placeholder.com/192.png&quot;,&quot;sizes&quot;:&quot;192x192&quot;,&quot;type&quot;:&quot;image/png&quot;},
-      {&quot;src&quot;:&quot;https://via.placeholder.com/512.png&quot;,&quot;sizes&quot;:&quot;512x512&quot;,&quot;type&quot;:&quot;image/png&quot;}
-    ]
-  }">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Student Result Checker (PWA)</title>
+  <meta name="theme-color" content="#2563eb"/>
 
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #f3f4f6;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
       margin: 0;
+      padding: 0;
+      background: #f3f4f6;
+      color: #111;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      min-height: 100vh;
     }
-    .card {
-      background: #fff;
-      padding: 2rem;
-      border-radius: 1rem;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    header {
+      background: #2563eb;
+      color: white;
       width: 100%;
-      max-width: 400px;
+      padding: 1rem;
       text-align: center;
     }
-    h1 {
-      color: #1e3a8a;
-      margin-bottom: 1rem;
-    }
-    input {
+    main {
+      flex: 1;
       width: 100%;
+      max-width: 500px;
+      padding: 1rem;
+    }
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
+      margin-bottom: 1.2rem;
+    }
+    input, button {
       padding: 0.8rem;
-      margin: 0.5rem 0;
+      font-size: 1rem;
+      border-radius: 8px;
       border: 1px solid #ccc;
-      border-radius: 0.5rem;
     }
     button {
-      background: #1e3a8a;
-      color: #fff;
+      background: #2563eb;
+      color: white;
       border: none;
-      padding: 0.8rem 1.2rem;
-      margin-top: 0.5rem;
-      border-radius: 0.5rem;
       cursor: pointer;
-      width: 100%;
     }
-    button:hover { background: #0f245c; }
+    button:hover {
+      background: #1d4ed8;
+    }
     .result {
-      margin-top: 1rem;
+      background: white;
       padding: 1rem;
-      background: #f9fafb;
-      border-radius: 0.5rem;
-      text-align: left;
-    }
-    .error {
-      color: red;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
       margin-top: 1rem;
+    }
+    .hidden {
+      display: none;
     }
   </style>
 </head>
 <body>
-  <div class="card">
-    <h1>Result Checker</h1>
-    <input type="text" id="matric" placeholder="Enter Matric Number">
-    <button onclick="checkResult()">Check Result</button>
-    <div id="output"></div>
-  </div>
+  <header>
+    <h1>Student Result Checker</h1>
+  </header>
+  <main>
+    <form id="resultForm">
+      <label for="matric">Enter Matric Number:</label>
+      <input type="text" id="matric" placeholder="e.g. CSC/2021/001" required />
+      <button type="submit">Check Result</button>
+    </form>
+    <div id="resultBox" class="result hidden"></div>
+  </main>
 
   <script>
-    // Offline student result "database"
-    const results = {
-      "CS2021001": { name: "Alice Johnson", GPA: 3.8, remark: "Excellent" },
-      "CS2021002": { name: "Ben Okoro", GPA: 2.9, remark: "Good" },
-      "CS2021003": { name: "Chioma Ade", GPA: 2.0, remark: "Pass" },
-      "CS2021004": { name: "David Musa", GPA: 1.5, remark: "Probation" }
+    // Sample student results database (extend as needed)
+    const resultsDB = {
+      "CSC/2021/001": { name: "John Doe", gpa: 3.75, remark: "Excellent" },
+      "CSC/2021/002": { name: "Jane Smith", gpa: 3.25, remark: "Very Good" },
+      "CSC/2021/003": { name: "Michael Lee", gpa: 2.80, remark: "Good" }
     };
 
-    function checkResult() {
-      const matric = document.getElementById("matric").value.trim();
-      const output = document.getElementById("output");
-      output.innerHTML = "";
+    const form = document.getElementById("resultForm");
+    const resultBox = document.getElementById("resultBox");
 
-      if(results[matric]) {
-        const r = results[matric];
-        output.innerHTML = `
-          <div class="result">
-            <strong>Name:</strong> ${r.name}<br>
-            <strong>Matric No:</strong> ${matric}<br>
-            <strong>GPA:</strong> ${r.GPA}<br>
-            <strong>Remark:</strong> ${r.remark}
-          </div>
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const matric = document.getElementById("matric").value.trim().toUpperCase();
+      if(resultsDB[matric]) {
+        const r = resultsDB[matric];
+        resultBox.innerHTML = `
+          <h3>Result for ${matric}</h3>
+          <p><strong>Name:</strong> ${r.name}</p>
+          <p><strong>GPA:</strong> ${r.gpa}</p>
+          <p><strong>Remark:</strong> ${r.remark}</p>
         `;
+        resultBox.classList.remove("hidden");
       } else {
-        output.innerHTML = `<div class="error">No result found for Matric No: ${matric}</div>`;
+        resultBox.innerHTML = `<p style="color:red;">No record found for ${matric}</p>`;
+        resultBox.classList.remove("hidden");
       }
-    }
+    });
 
-    // Self-contained service worker registration
+    // ===== Inline PWA Manifest =====
+    const manifest = {
+      "name": "Student Result Checker",
+      "short_name": "ResultChecker",
+      "start_url": ".",
+      "display": "standalone",
+      "background_color": "#f3f4f6",
+      "theme_color": "#2563eb",
+      "icons": [
+        { "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAQAAACENnwnAAAAI0lEQVR42mJ0cfP+PwMa4MDAwPDkz8DAwMDwz8DAwMDASBgBQU0EGjQmUkkAAAAASUVORK5CYII=", "sizes": "192x192", "type": "image/png" },
+        { "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAQAAACENnwnAAAAI0lEQVR42mJ0cfP+PwMa4MDAwPDkz8DAwMDwz8DAwMDASBgBQU0EGjQmUkkAAAAASUVORK5CYII=", "sizes": "512x512", "type": "image/png" }
+      ]
+    };
+    const blob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
+    const manifestURL = URL.createObjectURL(blob);
+    const link = document.createElement('link');
+    link.rel = 'manifest';
+    link.href = manifestURL;
+    document.head.appendChild(link);
+
+    // ===== Service Worker (inline registration) =====
+    const swCode = `
+      const CACHE_NAME = "result-checker-v1";
+      const OFFLINE_URL = "offline.html";
+      self.addEventListener("install", (event) => {
+        event.waitUntil(
+          caches.open(CACHE_NAME).then((cache) => {
+            return cache.addAll(["./", OFFLINE_URL]);
+          })
+        );
+      });
+      self.addEventListener("fetch", (event) => {
+        event.respondWith(
+          fetch(event.request).catch(() => {
+            return caches.match(event.request).then((resp) => {
+              return resp || (event.request.mode === "navigate" ? caches.match(OFFLINE_URL) : undefined);
+            });
+          })
+        );
+      });
+    `;
     if ("serviceWorker" in navigator) {
-      const swCode = `
-        const CACHE_NAME = "student-result-cache-v1";
-        const urlsToCache = ["./"];
-
-        self.addEventListener("install", e => {
-          e.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache)));
-        });
-
-        self.addEventListener("fetch", e => {
-          e.respondWith(
-            caches.match(e.request).then(res => res || fetch(e.request).catch(() => new Response('<h1>Offline</h1>',{headers:{'Content-Type':'text/html'}})))
-          );
-        });
-      `;
-      const blob = new Blob([swCode], { type: "application/javascript" });
-      const swUrl = URL.createObjectURL(blob);
-      navigator.serviceWorker.register(swUrl);
+      const blobSW = new Blob([swCode], { type: "application/javascript" });
+      const swURL = URL.createObjectURL(blobSW);
+      navigator.serviceWorker.register(swURL);
     }
+
+    // ===== Offline Fallback Page =====
+    const offlinePage = `
+      <!DOCTYPE html><html><head><meta charset="UTF-8"><title>Offline</title></head>
+      <body style="font-family:sans-serif;text-align:center;padding:2rem;">
+        <h2>You are offline</h2>
+        <p>Please reconnect to check results.</p>
+      </body></html>
+    `;
+    const offlineBlob = new Blob([offlinePage], { type: "text/html" });
+    const offlineURL = URL.createObjectURL(offlineBlob);
+    caches.open("result-checker-v1").then(c => c.put("offline.html", new Response(offlineBlob)));
   </script>
 </body>
 </html>
